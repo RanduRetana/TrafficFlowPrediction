@@ -1,9 +1,8 @@
 """
 Defination of NN model
 """
-from keras.layers import Dense, Dropout, Activation
-from keras.layers.recurrent import LSTM, GRU
-from keras.models import Sequential
+from keras.layers import Dense, Dropout, Activation, LSTM, GRU, Input
+from keras.models import Sequential, Model
 
 
 def get_lstm(units):
@@ -65,29 +64,29 @@ def _get_sae(inputs, hidden, output):
     return model
 
 
+
 def get_saes(layers):
-    """SAEs(Stacked Auto-Encoders)
-    Build SAEs Model.
-
-    # Arguments
-        layers: List(int), number of input, output and hidden units.
-    # Returns
-        models: List(Model), List of SAE and SAEs.
     """
-    sae1 = _get_sae(layers[0], layers[1], layers[-1])
-    sae2 = _get_sae(layers[1], layers[2], layers[-1])
-    sae3 = _get_sae(layers[2], layers[3], layers[-1])
-
+    Build SAEs model.
+    
+    Arguments:
+    layers: A list of integers, the number of units in each layer
+    """
+    models = []
+    for i in range(1, len(layers) - 1):
+        inputs = Input(shape=(layers[i-1],))
+        encoded = Dense(layers[i], activation='sigmoid', name=f'hidden{i}')(inputs)
+        decoded = Dense(layers[i-1], activation='sigmoid')(encoded)
+        
+        autoencoder = Model(inputs, decoded)
+        encoder = Model(inputs, encoded)
+        models.append((autoencoder, encoder))
+    
+    # The final model
     saes = Sequential()
-    saes.add(Dense(layers[1], input_dim=layers[0], name='hidden1'))
-    saes.add(Activation('sigmoid'))
-    saes.add(Dense(layers[2], name='hidden2'))
-    saes.add(Activation('sigmoid'))
-    saes.add(Dense(layers[3], name='hidden3'))
-    saes.add(Activation('sigmoid'))
-    saes.add(Dropout(0.2))
-    saes.add(Dense(layers[4], activation='sigmoid'))
-
-    models = [sae1, sae2, sae3, saes]
-
-    return models
+    saes.add(Input(shape=(layers[0],)))
+    for i in range(1, len(layers) - 1):
+        saes.add(Dense(layers[i], activation='sigmoid', name=f'hidden{i}'))
+    saes.add(Dense(layers[-1], activation='linear'))  # Output layer
+    
+    return models, saes

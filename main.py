@@ -7,10 +7,12 @@ import numpy as np
 import pandas as pd
 from data.data import process_data
 from keras.models import load_model
-from keras.utils.vis_utils import plot_model
+from keras.utils import plot_model
 import sklearn.metrics as metrics
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+from keras.losses import mean_squared_error
+from keras.metrics import mean_absolute_percentage_error
 warnings.filterwarnings("ignore")
 
 
@@ -92,11 +94,17 @@ def plot_results(y_true, y_preds, names):
 
     plt.show()
 
-
 def main():
-    lstm = load_model('model/lstm.h5')
-    gru = load_model('model/gru.h5')
-    saes = load_model('model/saes.h5')
+    custom_objects = {
+        'mse': mean_squared_error,
+        'mean_squared_error': mean_squared_error,
+        'mean_absolute_percentage_error': mean_absolute_percentage_error
+    }
+
+    lstm = load_model('model/lstm.h5', custom_objects=custom_objects)
+    gru = load_model('model/gru.h5', custom_objects=custom_objects)
+    saes = load_model('model/saes.h5', custom_objects=custom_objects)
+    
     models = [lstm, gru, saes]
     names = ['LSTM', 'GRU', 'SAEs']
 
@@ -112,8 +120,9 @@ def main():
             X_test = np.reshape(X_test, (X_test.shape[0], X_test.shape[1]))
         else:
             X_test = np.reshape(X_test, (X_test.shape[0], X_test.shape[1], 1))
-        file = 'images/' + name + '.png'
-        plot_model(model, to_file=file, show_shapes=True)
+        
+        # Removed plot_model call
+        
         predicted = model.predict(X_test)
         predicted = scaler.inverse_transform(predicted.reshape(-1, 1)).reshape(1, -1)[0]
         y_preds.append(predicted[:288])
@@ -122,6 +131,6 @@ def main():
 
     plot_results(y_test[: 288], y_preds, names)
 
-
 if __name__ == '__main__':
     main()
+
